@@ -1,5 +1,5 @@
 #building the model in tensorflow
-#from data_clean.py import *
+from data_clean import *
 import tensorflow as tf
 
 def model_inputs():
