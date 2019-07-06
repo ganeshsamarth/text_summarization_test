@@ -1,6 +1,8 @@
 # training the built model_inputs
 
 from build_model import *
+from tensorflow.python.layers.core import Dense
+from tensorflow.python.ops.rnn_cell_impl import _zero_state_tensors
 # Set the Hyperparameters
 epochs = 100
 batch_size = 64
