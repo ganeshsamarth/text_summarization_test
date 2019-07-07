@@ -222,19 +222,23 @@ def pad_sentence_batch(sentence,max_length):
     """Pad sentences with <PAD> so that each sentence of a batch has the same length"""
 
     return [sentence + [vocab_to_int['<PAD>']] * (max_length - len(sentence))]
+
+def process_encoding_input(target_data, vocab_to_int, batch_size):
+    '''Remove the last word id from each batch and concat the <GO> to the begining of each batch'''
+
+    ending = tf.strided_slice(target_data, [0, 0], [batch_size, -1], [1, 1])
+    dec_input = tf.concat([tf.fill([batch_size, 1], vocab_to_int['<GO>']), ending], 1)
+
+    return dec_input
+
 padded_summaries=list()
 padded_text=list()
 
 for summaries in sorted_summaries:
+    summaries=process_encoding_input(summaries,vocab_to_int,1)
     summaries=pad_sentence_batch(summaries,max_summary_length)
     padded_summaries.append(summaries)
 
 for text in sorted_texts:
     text=pad_sentence_batch(text,max_text_length)
     padded_text.append(text)
-
-
-embedding=word_embedding_matrix
-print(padded_summaries[0])
-enc_embed_input=tf.nn.embedding_lookup(embedding,padded_summaries[0])
-print(enc_embed_input.shape)
