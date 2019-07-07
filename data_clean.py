@@ -62,7 +62,7 @@ count_words(word_counts, clean_texts)
 print("Size of Vocabulary:", len(word_counts))
 
 embeddings_index = {}
-with open('C:\\Users\\ganeshsamarth\\Downloads\\numberbatch-en-17.06.txt.txt', encoding='utf-8') as f:
+with open('/home/pbu/Downloads/numberbatch-en.txt', encoding='utf-8') as f:
     for line in f:
         values = line.split(' ')
         word = values[0]
@@ -217,19 +217,24 @@ for length in range(min(lengths_texts.counts), max_text_length):
 print(len(sorted_summaries))
 print(len(sorted_texts))
 #print(np.array(sorted_texts).shape)
+
 def pad_sentence_batch(sentence,max_length):
     """Pad sentences with <PAD> so that each sentence of a batch has the same length"""
 
     return [sentence + [vocab_to_int['<PAD>']] * (max_length - len(sentence))]
+padded_summaries=list()
+padded_text=list()
 
 for summaries in sorted_summaries:
     summaries=pad_sentence_batch(summaries,max_summary_length)
+    padded_summaries.append(summaries)
 
 for text in sorted_texts:
     text=pad_sentence_batch(text,max_text_length)
+    padded_text.append(text)
 
 
 embedding=word_embedding_matrix
-print(len(sorted_summaries[0]))
-enc_embed_input=tf.nn.embedding_lookup(embedding,sorted_summaries[0])
+print(padded_summaries[0])
+enc_embed_input=tf.nn.embedding_lookup(embedding,padded_summaries[0])
 print(enc_embed_input.shape)

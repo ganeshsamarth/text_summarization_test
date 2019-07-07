@@ -8,7 +8,7 @@ from nltk.corpus import stopwords
 import time
 #from tensorflow.python.layers.core import Dense
 #from tensorflow.python.ops.rnn_cell_impl import _zero_state_tensors
-reviews = pd.read_csv("C:\\Users\\ganeshsamarth\\Downloads\\amazon_food_reviews\\Reviews.csv")
+reviews = pd.read_csv("/home/pbu/Downloads/amazon-fine-food-reviews/Reviews.csv")
 #print(reviews.shape)
 print(reviews.isnull().sum())
 # Remove null values and unneeded features
