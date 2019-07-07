@@ -2,12 +2,12 @@ import numpy as np
 import re
 import pandas as pd
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
 import re
 from nltk.corpus import stopwords
 import time
-from tensorflow.python.layers.core import Dense
-from tensorflow.python.ops.rnn_cell_impl import _zero_state_tensors
+#from tensorflow.python.layers.core import Dense
+#from tensorflow.python.ops.rnn_cell_impl import _zero_state_tensors
 reviews = pd.read_csv("C:\\Users\\ganeshsamarth\\Downloads\\amazon_food_reviews\\Reviews.csv")
 #print(reviews.shape)
 print(reviews.isnull().sum())

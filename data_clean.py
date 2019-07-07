@@ -1,5 +1,6 @@
 from data_manip import *
 import nltk
+import tensorflow as tf
 nltk.download('stopwords')
 
 def clean_text(text, remove_stopwords = True):
@@ -215,3 +216,20 @@ for length in range(min(lengths_texts.counts), max_text_length):
 # Compare lengths to ensure they match
 print(len(sorted_summaries))
 print(len(sorted_texts))
+#print(np.array(sorted_texts).shape)
+def pad_sentence_batch(sentence,max_length):
+    """Pad sentences with <PAD> so that each sentence of a batch has the same length"""
+
+    return [sentence + [vocab_to_int['<PAD>']] * (max_length - len(sentence))]
+
+for summaries in sorted_summaries:
+    summaries=pad_sentence_batch(summaries,max_summary_length)
+
+for text in sorted_texts:
+    text=pad_sentence_batch(text,max_text_length)
+
+
+embedding=word_embedding_matrix
+print(len(sorted_summaries[0]))
+enc_embed_input=tf.nn.embedding_lookup(embedding,sorted_summaries[0])
+print(enc_embed_input.shape)
