@@ -1,17 +1,13 @@
-#training the model in keras
 from build_model_keras import *
-start = 200000
-end = start + 50000
-sorted_summaries_short = sorted_summaries[start:end]
-sorted_texts_short = sorted_texts[start:end]
-print("The shortest text length:", len(sorted_texts_short[0]))
-print("The longest text length:",len(sorted_texts_short[-1]))
 
-embeddings=word_embedding_matrix
-enc_embed_input=tf.nn.embedding_lookup(embeddings,padded_text)
-dec_embed_input=tf.nn.embedding_lookup(embeddings,padded_summaries)
-n_units=100
-model,encoder_model,decoder_model=define_model(max_text_length,max_summary_length,n_units)
+model.compile(optimizer='rmsprop', loss='sparse_categorical_crossentropy')
+checkpointer = ModelCheckpoint(filepath='seq2seq'+"_keras_sp.h5", verbose=1, save_best_only=True)
 
+history=model.fit([x_tr,y_tr[:,:-1]], y_tr.reshape(y_tr.shape[0],y_tr.shape[1], 1)[:,1:] ,epochs=50,
+                  callbacks=[checkpointer],batch_size=128, validation_data=([x_val,y_val[:,:-1]], y_val.reshape(y_val.shape[0],y_val.shape[1], 1)[:,1:]))
 
-model.compile(optimizer='rmsprop',loss='categorical_crossentropy')
+from matplotlib import pyplot
+pyplot.plot(history.history['loss'], label='train')
+pyplot.plot(history.history['val_loss'], label='test')
+pyplot.legend()
+pyplot.show()

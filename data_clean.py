@@ -1,244 +1,181 @@
 from data_manip import *
-import nltk
-import tensorflow as tf
-nltk.download('stopwords')
 
-def clean_text(text, remove_stopwords = True):
+stop_words = set(stopwords.words('english'))
 
-    # Convert words to lower case
-    text = text.lower()
-    #[_\-;%()+&=*%.,!?:$@\[\]/]
-    # Replace contractions with their longer forms
-    if True:
-        text = text.split()
-        new_text = []
-        for word in text:
-            if word in contractions:
-                new_text.append(contractions[word])
-            else:
-                new_text.append(word)
-        text = " ".join(new_text)
-
-    # Format words and remove unwanted characters
-    text = re.sub(r'https?:\/\/.*[\r\n]*', '', text,
-                  flags=re.MULTILINE)
-    text = re.sub(r'\<a href', ' ', text)
-    text = re.sub(r'&amp;', '', text)
-    text = re.sub(r'[_"\-;%()+&=*%.,!?:#$@\[\]/]', '', text)
-    text = re.sub(r'<br />', ' ', text)
-    text = re.sub(r'\'', ' ', text)
-
-    # Optionally, remove stop words
-    if remove_stopwords:
-        text = text.split()
-        stops = set(stopwords.words("english"))
-        text = [w for w in text if not w in stops]
-        text = " ".join(text)
-    return text
-
-clean_summaries = []
-for summary in reviews.Summary:
-    clean_summaries.append(clean_text(summary, remove_stopwords=False))
-print("Summaries are complete.")
-
-clean_texts = []
-for text in reviews.Text:
-    clean_texts.append(clean_text(text))
-print("Texts are complete.")
-
-def count_words(count_dict, text):
-    '''Count the number of occurrences of each word in a set of text'''
-    for sentence in text:
-        for word in sentence.split():
-            if word not in count_dict:
-                count_dict[word] = 1
-            else:
-                count_dict[word] += 1
-word_counts = {}
-
-count_words(word_counts, clean_summaries)
-count_words(word_counts, clean_texts)
-
-print("Size of Vocabulary:", len(word_counts))
-
-embeddings_index = {}
-with open('/home/pbu/Downloads/numberbatch-en.txt', encoding='utf-8') as f:
-    for line in f:
-        values = line.split(' ')
-        word = values[0]
-        embedding = np.asarray(values[1:], dtype='float32')
-        embeddings_index[word] = embedding
-print('Word embeddings:', len(embeddings_index))
-
-# Find the number of words that are missing from CN, and are used more than our threshold.
-missing_words = 0
-threshold = 20
-
-for word, count in word_counts.items():
-    if count > threshold:
-        if word not in embeddings_index:
-            missing_words += 1
-
-missing_ratio = round(missing_words/len(word_counts),4)*100
-
-print("Number of words missing from CN:", missing_words)
-print("Percent of words that are missing from vocabulary: {}%".format(missing_ratio))
-
-# Limit the vocab that we will use to words that appear ≥ threshold or are in GloVe
-
-#dictionary to convert words to integers
-vocab_to_int = {}
-
-value = 0
-for word, count in word_counts.items():
-    if count >= threshold or word in embeddings_index:
-        vocab_to_int[word] = value
-        value += 1
-
-# Special tokens that will be added to our vocab
-codes = ["<UNK>","<PAD>","<EOS>","<GO>"]
-
-# Add codes to vocab
-for code in codes:
-    vocab_to_int[code] = len(vocab_to_int)
-
-# Dictionary to convert integers to words
-int_to_vocab = {}
-for word, value in vocab_to_int.items():
-    int_to_vocab[value] = word
-
-usage_ratio = round(len(vocab_to_int) / len(word_counts),4)*100
-
-print("Total number of unique words:", len(word_counts))
-print("Number of words we will use:", len(vocab_to_int))
-print("Percent of words we will use: {}%".format(usage_ratio))
-
-# Need to use 300 for embedding dimensions to match CN's vectors.
-embedding_dim = 300
-nb_words = len(vocab_to_int)
-
-# Create matrix with default values of zero
-word_embedding_matrix = np.zeros((nb_words, embedding_dim), dtype=np.float32)
-for word, i in vocab_to_int.items():
-    if word in embeddings_index:
-        word_embedding_matrix[i] = embeddings_index[word]
+def text_cleaner(text,num):
+    newString = text.lower()
+    newString = BeautifulSoup(newString, "lxml").text
+    newString = re.sub(r'\([^)]*\)', '', newString)
+    newString = re.sub('"','', newString)
+    newString = ' '.join([contraction_mapping[t] if t in contraction_mapping else t for t in newString.split(" ")])
+    newString = re.sub(r"'s\b","",newString)
+    newString = re.sub("[^a-zA-Z]", " ", newString)
+    newString = re.sub('[m]{2,}', 'mm', newString)
+    if(num==0):
+        tokens = [w for w in newString.split() if not w in stop_words]
     else:
-        # If word not in CN, create a random embedding for it
-        new_embedding = np.array(np.random.uniform(-1.0, 1.0, embedding_dim))
-        embeddings_index[word] = new_embedding
-        word_embedding_matrix[i] = new_embedding
+        tokens=newString.split()
+    long_words=[]
+    for i in tokens:
+        if len(i)>1:                                                 #removing short word
+            long_words.append(i)
+    return (" ".join(long_words)).strip()
 
-# Check if value matches len(vocab_to_int)
-print(len(word_embedding_matrix))
+cleaned_text = []
+for t in data['Text']:
+    cleaned_text.append(text_cleaner(t,0))
 
-def convert_to_ints(text, word_count, unk_count, eos=False):
-    '''Convert words in text to an integer.
-       If word is not in vocab_to_int, use UNK's integer.
-       Total the number of words and UNKs.
-       Add EOS token to the end of texts'''
-    ints = []
-    for sentence in text:
-        sentence_ints = []
-        for word in sentence.split():
-            word_count += 1
-            if word in vocab_to_int:
-                sentence_ints.append(vocab_to_int[word])
-            else:
-                sentence_ints.append(vocab_to_int["<UNK>"])
-                unk_count += 1
-        if eos:
-            sentence_ints.append(vocab_to_int["<EOS>"])
-        ints.append(sentence_ints)
-    return ints, word_count, unk_count
-# Apply convert_to_ints to clean_summaries and clean_texts
-word_count = 0
-unk_count = 0
+cleaned_summary = []
+for t in data['Summary']:
+    cleaned_summary.append(text_cleaner(t,1))
 
-int_summaries, word_count, unk_count = convert_to_ints(clean_summaries, word_count, unk_count)
-int_texts, word_count, unk_count = convert_to_ints(clean_texts, word_count, unk_count, eos=True)
-unk_percent = round(unk_count/word_count,4)*100
+data['cleaned_text']=cleaned_text
+data['cleaned_summary']=cleaned_summary
+'''
+import matplotlib.pyplot as plt
 
-print("Total number of words in headlines:", word_count)
-print("Total number of UNKs in headlines:", unk_count)
-print("Percent of words that are UNK: {}%".format(unk_percent))
+text_word_count = []
+summary_word_count = []
+
+# populate the lists with sentence lengths
+for i in data['cleaned_text']:
+      text_word_count.append(len(i.split()))
+
+for i in data['cleaned_summary']:
+      summary_word_count.append(len(i.split()))
+
+length_df = pd.DataFrame({'text':text_word_count, 'summary':summary_word_count})
+
+length_df.hist(bins = 30)
+plt.show()
+'''
+
+cnt=0
+for i in data['cleaned_summary']:
+    if(len(i.split())<=8):
+        cnt=cnt+1
+print(cnt/len(data['cleaned_summary']))
+
+max_text_len=30
+max_summary_len=8
+
+cleaned_text = np.array(data['cleaned_text'])
+cleaned_summary = np.array(data['cleaned_summary'])
+
+short_text = []
+short_summary = []
+
+for i in range(len(cleaned_text)):
+    if (len(cleaned_summary[i].split()) <= max_summary_len and len(cleaned_text[i].split()) <= max_text_len):
+        short_text.append(cleaned_text[i])
+        short_summary.append(cleaned_summary[i])
+
+df = pd.DataFrame({'text': short_text, 'summary': short_summary})
+
+df['summary'] = df['summary'].apply(lambda x : 'sostok '+ x + ' eostok')
+
+from sklearn.model_selection import train_test_split
+x_tr,x_val,y_tr,y_val=train_test_split(np.array(df['text']),np.array(df['summary']),test_size=0.1,random_state=0,shuffle=True)
 
 
-def create_lengths(text):
-    '''Create a data frame of the sentence lengths from a text'''
-    lengths = []
-    for sentence in text:
-        lengths.append(len(sentence))
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
 
-    return pd.DataFrame(lengths, columns=['counts'])
+#prepare a tokenizer for reviews on training data
+x_tokenizer = Tokenizer()
+x_tokenizer.fit_on_texts(list(x_tr))
 
-lengths_summaries = create_lengths(int_summaries)
-lengths_texts = create_lengths(int_texts)
+thresh = 4
 
-print("Summaries:")
-print(lengths_summaries.describe())
-print()
-print("Texts:")
-print(lengths_texts.describe())
+cnt = 0
+tot_cnt = 0
+freq = 0
+tot_freq = 0
 
+for key, value in x_tokenizer.word_counts.items():
+    tot_cnt = tot_cnt + 1
+    tot_freq = tot_freq + value
+    if (value < thresh):
+        cnt = cnt + 1
+        freq = freq + value
 
-def unk_counter(sentence):
-    '''Counts the number of time UNK appears in a sentence.'''
-    unk_count = 0
-    for word in sentence:
-        if word == vocab_to_int["<UNK>"]:
-            unk_count += 1
-    return unk_count
+print("% of rare words in vocabulary:", (cnt / tot_cnt) * 100)
+print("Total Coverage of rare words:", (freq / tot_freq) * 100)
 
-# Sort the summaries and texts by the length of the texts, shortest to longest
-# Limit the length of summaries and texts based on the min and max ranges.
-# Remove reviews that include too many UNKs
+#prepare a tokenizer for reviews on training data
+x_tokenizer = Tokenizer(num_words=tot_cnt-cnt)
+x_tokenizer.fit_on_texts(list(x_tr))
 
-sorted_summaries = []
-sorted_texts = []
-max_text_length = 84
-max_summary_length = 13
-min_length = 2
-unk_text_limit = 1
-unk_summary_limit = 0
+#convert text sequences into integer sequences
+x_tr_seq    =   x_tokenizer.texts_to_sequences(x_tr)
+x_val_seq   =   x_tokenizer.texts_to_sequences(x_val)
 
-for length in range(min(lengths_texts.counts), max_text_length):
-    for count, words in enumerate(int_summaries):
-        if (len(int_summaries[count]) >= min_length and
-            len(int_summaries[count]) <= max_summary_length and
-            len(int_texts[count]) >= min_length and
-            unk_counter(int_summaries[count]) <= unk_summary_limit and
-            unk_counter(int_texts[count]) <= unk_text_limit and
-            length == len(int_texts[count])
-           ):
-            sorted_summaries.append(int_summaries[count])
-            sorted_texts.append(int_texts[count])
+#padding zero upto maximum length
+x_tr    =   pad_sequences(x_tr_seq,  maxlen=max_text_len, padding='post')
+x_val   =   pad_sequences(x_val_seq, maxlen=max_text_len, padding='post')
 
-# Compare lengths to ensure they match
-print(len(sorted_summaries))
-print(len(sorted_texts))
-#print(np.array(sorted_texts).shape)
+#size of vocabulary ( +1 for padding token)
+x_voc   =  x_tokenizer.num_words + 1
 
-def pad_sentence_batch(sentence,max_length):
-    """Pad sentences with <PAD> so that each sentence of a batch has the same length"""
+print(x_voc)
 
-    return [sentence + [vocab_to_int['<PAD>']] * (max_length - len(sentence))]
+#prepare a tokenizer for reviews on training data
+y_tokenizer = Tokenizer()
+y_tokenizer.fit_on_texts(list(y_tr))
 
-def process_encoding_input(target_data, vocab_to_int, batch_size):
-    '''Remove the last word id from each batch and concat the <GO> to the begining of each batch'''
+thresh = 6
 
-    ending = tf.strided_slice(target_data, [0, 0], [batch_size, -1], [1, 1])
-    dec_input = tf.concat([tf.fill([batch_size, 1], vocab_to_int['<GO>']), ending], 1)
+cnt = 0
+tot_cnt = 0
+freq = 0
+tot_freq = 0
 
-    return dec_input
+for key, value in y_tokenizer.word_counts.items():
+    tot_cnt = tot_cnt + 1
+    tot_freq = tot_freq + value
+    if (value < thresh):
+        cnt = cnt + 1
+        freq = freq + value
 
-padded_summaries=list()
-padded_text=list()
+print("% of rare words in vocabulary:", (cnt / tot_cnt) * 100)
+print("Total Coverage of rare words:", (freq / tot_freq) * 100)
 
-for summaries in sorted_summaries:
-    summaries=process_encoding_input(summaries,vocab_to_int,1)
-    summaries=pad_sentence_batch(summaries,max_summary_length)
-    padded_summaries.append(summaries)
+#prepare a tokenizer for reviews on training data
+y_tokenizer = Tokenizer(num_words=tot_cnt-cnt)
+y_tokenizer.fit_on_texts(list(y_tr))
 
-for text in sorted_texts:
-    text=pad_sentence_batch(text,max_text_length)
-    padded_text.append(text)
+#convert text sequences into integer sequences
+y_tr_seq    =   y_tokenizer.texts_to_sequences(y_tr)
+y_val_seq   =   y_tokenizer.texts_to_sequences(y_val)
+
+#padding zero upto maximum length
+y_tr    =   pad_sequences(y_tr_seq, maxlen=max_summary_len, padding='post')
+y_val   =   pad_sequences(y_val_seq, maxlen=max_summary_len, padding='post')
+
+#size of vocabulary
+y_voc  =   y_tokenizer.num_words +1
+y_tokenizer.word_counts['sostok'],len(y_tr)
+
+ind=[]
+for i in range(len(y_tr)):
+    cnt=0
+    for j in y_tr[i]:
+        if j!=0:
+            cnt=cnt+1
+    if(cnt==2):
+        ind.append(i)
+
+y_tr=np.delete(y_tr,ind, axis=0)
+x_tr=np.delete(x_tr,ind, axis=0)
+
+ind=[]
+for i in range(len(y_val)):
+    cnt=0
+    for j in y_val[i]:
+        if j!=0:
+            cnt=cnt+1
+    if(cnt==2):
+        ind.append(i)
+
+y_val=np.delete(y_val,ind, axis=0)
+x_val=np.delete(x_val,ind, axis=0)

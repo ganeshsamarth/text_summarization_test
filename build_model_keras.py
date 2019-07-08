@@ -1,37 +1,46 @@
-#building the model keras---an attempt to build a seq2seq model in keras
 from data_clean import *
 
+from keras import backend as K
+K.clear_session()
+
+latent_dim = 300
+embedding_dim=100
+
+# Encoder
+encoder_inputs = Input(shape=(max_text_len,))
+
+#embedding layer
+enc_emb =  Embedding(x_voc, embedding_dim,trainable=True)(encoder_inputs)
+
+#encoder lstm 1
+encoder_lstm1 = LSTM(latent_dim,return_sequences=True,return_state=True,dropout=0.4,recurrent_dropout=0.4)
+encoder_output1, state_h1, state_c1 = encoder_lstm1(enc_emb)
+
+#encoder lstm 2
+encoder_lstm2 = LSTM(latent_dim,return_sequences=True,return_state=True,dropout=0.4,recurrent_dropout=0.4)
+encoder_output2, state_h2, state_c2 = encoder_lstm2(encoder_output1)
+
+#encoder lstm 3
+encoder_lstm3=LSTM(latent_dim, return_state=True, return_sequences=True,dropout=0.4,recurrent_dropout=0.4)
+encoder_outputs, state_h, state_c= encoder_lstm3(encoder_output2)
+
+# Set up the decoder, using `encoder_states` as initial state.
+decoder_inputs = Input(shape=(None,))
+
+#embedding layer
+dec_emb_layer = Embedding(y_voc, embedding_dim,trainable=True)
+dec_emb = dec_emb_layer(decoder_inputs)
+
+decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True,dropout=0.4,recurrent_dropout=0.2)
+decoder_outputs,decoder_fwd_state, decoder_back_state = decoder_lstm(dec_emb,initial_state=[state_h, state_c])
 
 
-def define_model(max_text_length,max_summary_length,n_units):
-     dim_rep=300
 
+#dense layer
+decoder_dense =  TimeDistributed(Dense(y_voc, activation='softmax'))
+decoder_outputs = decoder_dense(decoder_outputs)
 
-     encoder_inputs=Input(shape=(None,max_text_length,dim_rep))
+# Define the model
+model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
 
-     encoder=LSTM(n_units,return_state=True)
-     encoder_outputs, state_h, state_c = encoder(encoder_inputs)
-     encoder_states = [state_h, state_c]
-
-     #define training decoder
-     decoder_inputs = Input(shape=(None, max_summary_length,dim_rep))
-
-     decoder_lstm = LSTM(n_units, return_sequences=True, return_state=True)
-     decoder_outputs, _, _ = decoder_lstm(decoder_inputs, initial_state=encoder_states)
-     decoder_dense = Dense(n_output, activation='softmax')
-     decoder_outputs = decoder_dense(decoder_outputs)
-     model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
-
-     #define inference encoder
-     encoder_model = Model(encoder_inputs, encoder_states)
-
-     #define inference decoder
-     decoder_state_input_h = Input(shape=(n_units,))
-     decoder_state_input_c = Input(shape=(n_units,))
-     decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
-     decoder_outputs, state_h, state_c = decoder_lstm(decoder_inputs,  initial_state=decoder_states_inputs)
-     decoder_states = [state_h, state_c]
-     decoder_outputs = decoder_dense(decoder_outputs)
-     decoder_model = Model([decoder_inputs] + decoder_states_inputs, [decoder_outputs] + decoder_states)
-
-     return model, encoder_model, decoder_model
+model.summary()
