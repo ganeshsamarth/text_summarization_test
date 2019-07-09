@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from nltk.corpus import stopwords
-from keras.layers import Input, LSTM, Embedding, Dense, Concatenate, TimeDistributed
+from keras.layers import Input, LSTM, Embedding, Dense, Concatenate, TimeDistributed,Bidirectional
 from keras.models import Model
 from keras.callbacks import ModelCheckpoint
 

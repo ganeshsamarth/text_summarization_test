@@ -79,7 +79,7 @@ def seq2text(input_seq):
             newString=newString+reverse_source_word_index[i]+' '
     return newString
 for i in range(0,5):
-    print("Review:",seq2text(x_tr[i]))
-    print("Original summary:",seq2summary(y_tr[i]))
-    print("Predicted summary:",decode_sequence(x_tr[i].reshape(1,max_text_len)))
+    print("Review:",seq2text(x_val[i]))
+    print("Original summary:",seq2summary(y_val[i]))
+    print("Predicted summary:",decode_sequence(x_val[i].reshape(1,max_text_len)))
     print("\n")

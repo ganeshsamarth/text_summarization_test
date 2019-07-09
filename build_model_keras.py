@@ -1,5 +1,5 @@
 from data_clean import *
-
+from keras_self_attention import SeqSelfAttention
 from keras import backend as K
 K.clear_session()
 
@@ -21,7 +21,7 @@ encoder_lstm2 = LSTM(latent_dim,return_sequences=True,return_state=True,dropout=
 encoder_output2, state_h2, state_c2 = encoder_lstm2(encoder_output1)
 
 #encoder lstm 3
-encoder_lstm3=LSTM(latent_dim, return_state=True, return_sequences=True,dropout=0.4,recurrent_dropout=0.4)
+encoder_lstm3= LSTM(latent_dim, return_state=True, return_sequences=True,dropout=0.4,recurrent_dropout=0.4)
 encoder_outputs, state_h, state_c= encoder_lstm3(encoder_output2)
 
 # Set up the decoder, using `encoder_states` as initial state.
@@ -33,6 +33,7 @@ dec_emb = dec_emb_layer(decoder_inputs)
 
 decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True,dropout=0.4,recurrent_dropout=0.2)
 decoder_outputs,decoder_fwd_state, decoder_back_state = decoder_lstm(dec_emb,initial_state=[state_h, state_c])
+
 
 
 
