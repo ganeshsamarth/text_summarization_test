@@ -1,5 +1,5 @@
 from data_clean import *
-from keras_self_attention import SeqSelfAttention
+from attention_keras.layers.attention import AttentionLayer
 from keras import backend as K
 K.clear_session()
 
